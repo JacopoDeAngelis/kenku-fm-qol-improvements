@@ -21,6 +21,7 @@ import { Soundboard } from "../features/soundboards/Soundboard";
 import { useSoundboardPlayback } from "../features/soundboards/useSoundboardPlayback";
 import { SoundboardRemote } from "../features/soundboards/SoundboardRemote";
 import { SoundboardPlaybackSync } from "../features/soundboards/SoundboardPlaybackSync";
+import { Search } from "../features/search/Search";
 
 const WallPaper = styled("div")({
   position: "fixed",
@@ -70,6 +71,10 @@ export function App() {
           element={
             <Soundboard onPlay={soundboard.play} onStop={soundboard.stop} />
           }
+        />
+        <Route
+          path="search"
+          element={<Search />}
         />
       </Routes>
       <Player

@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import AddIcon from "@mui/icons-material/AddCircleRounded";
+import SearchIcon from "@mui/icons-material/SearchRounded";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -71,6 +72,13 @@ export function Home({ onPlayTrack, onPlaySound }: HomeProps) {
         mb: "248px",
       }}
     >
+      <Stack direction="row" justifyContent="flex-end" alignItems="center">
+        <Tooltip title="Search">
+          <IconButton onClick={() => navigate("/search")}>
+            <SearchIcon />
+          </IconButton>
+        </Tooltip>
+      </Stack>
       <Card>
         <CardContent>
           <Stack
