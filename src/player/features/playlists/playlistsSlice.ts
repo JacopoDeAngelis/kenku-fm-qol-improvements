@@ -11,6 +11,13 @@ export interface Playlist {
   background: string;
   title: string;
   id: string;
+  folderId?: string;
+}
+
+export interface Folder {
+  id: string;
+  title: string;
+  background: string;
 }
 
 export interface PlaylistsState {
@@ -18,11 +25,19 @@ export interface PlaylistsState {
     byId: Record<string, Playlist>;
     allIds: string[];
   };
+  folders: {
+    byId: Record<string, Folder>;
+    allIds: string[];
+  };
   tracks: Record<string, Track>;
 }
 
 const initialState: PlaylistsState = {
   playlists: {
+    byId: {},
+    allIds: [],
+  },
+  folders: {
     byId: {},
     allIds: [],
   },
@@ -35,7 +50,7 @@ export const playlistsSlice = createSlice({
   reducers: {
     addPlaylist: (state, action: PayloadAction<Playlist>) => {
       state.playlists.byId[action.payload.id] = action.payload;
-      state.playlists.allIds.push(action.payload.id);
+      state.playlists.allIds = [...(state.playlists.allIds ?? []), action.payload.id];
     },
     removePlaylist: (state, action: PayloadAction<string>) => {
       for (let track of state.playlists.byId[action.payload].tracks) {
@@ -117,6 +132,48 @@ export const playlistsSlice = createSlice({
       playlist.tracks.splice(oldIndex, 1);
       playlist.tracks.splice(newIndex, 0, action.payload.active);
     },
+    // Folder actions
+    addFolder: (state, action: PayloadAction<Folder>) => {
+      state.folders.byId[action.payload.id] = action.payload;
+      state.folders.allIds.push(action.payload.id);
+    },
+    removeFolder: (state, action: PayloadAction<string>) => {
+      // Remove folder reference from all playlists in this folder
+      for (const playlistId of state.playlists.allIds) {
+        if (state.playlists.byId[playlistId].folderId === action.payload) {
+          state.playlists.byId[playlistId].folderId = undefined;
+        }
+      }
+      delete state.folders.byId[action.payload];
+      state.folders.allIds = state.folders.allIds.filter(
+        (id) => id !== action.payload
+      );
+    },
+    editFolder: (state, action: PayloadAction<Partial<Folder>>) => {
+      if (!action.payload.id) {
+        throw Error("Id needed in editFolder payload");
+      }
+      state.folders.byId[action.payload.id] = {
+        ...state.folders.byId[action.payload.id],
+        ...action.payload,
+      };
+    },
+    moveFolder: (
+      state,
+      action: PayloadAction<{ active: string; over: string }>
+    ) => {
+      const oldIndex = state.folders.allIds.indexOf(action.payload.active);
+      const newIndex = state.folders.allIds.indexOf(action.payload.over);
+      state.folders.allIds.splice(oldIndex, 1);
+      state.folders.allIds.splice(newIndex, 0, action.payload.active);
+    },
+    movePlaylistToFolder: (
+      state,
+      action: PayloadAction<{ playlistId: string; folderId: string | undefined }>
+    ) => {
+      const { playlistId, folderId } = action.payload;
+      state.playlists.byId[playlistId].folderId = folderId;
+    },
   },
 });
 
@@ -130,6 +187,11 @@ export const {
   removeTrack,
   editTrack,
   moveTrack,
+  addFolder,
+  removeFolder,
+  editFolder,
+  moveFolder,
+  movePlaylistToFolder,
 } = playlistsSlice.actions;
 
 export default playlistsSlice.reducer;

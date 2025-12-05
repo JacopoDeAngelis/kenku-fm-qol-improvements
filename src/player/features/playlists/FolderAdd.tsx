@@ -9,18 +9,17 @@ import DialogTitle from "@mui/material/DialogTitle";
 import { v4 as uuid } from "uuid";
 
 import { useDispatch } from "react-redux";
-import { addPlaylist } from "./playlistsSlice";
+import { addFolder } from "./playlistsSlice";
 
 import { backgrounds } from "../../backgrounds";
 import { ImageSelector } from "../../common/ImageSelector";
 
-type PlaylistAddProps = {
+type FolderAddProps = {
   open: boolean;
   onClose: () => void;
-  folderId?: string;
 };
 
-export function PlaylistAdd({ open, onClose, folderId }: PlaylistAddProps) {
+export function FolderAdd({ open, onClose }: FolderAddProps) {
   const dispatch = useDispatch();
 
   const [title, setTitle] = useState("");
@@ -39,13 +38,13 @@ export function PlaylistAdd({ open, onClose, folderId }: PlaylistAddProps) {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const id = uuid();
-    dispatch(addPlaylist({ id, title, background, tracks: [], folderId }));
+    dispatch(addFolder({ id, title, background }));
     onClose();
   }
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Add Playlist</DialogTitle>
+      <DialogTitle>Add Folder</DialogTitle>
       <form onSubmit={handleSubmit}>
         <DialogContent>
           <TextField
@@ -74,3 +73,4 @@ export function PlaylistAdd({ open, onClose, folderId }: PlaylistAddProps) {
     </Dialog>
   );
 }
+

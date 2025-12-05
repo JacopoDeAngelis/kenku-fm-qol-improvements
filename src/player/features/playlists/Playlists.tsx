@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
 import AddRounded from "@mui/icons-material/AddCircleRounded";
+import CreateNewFolderRounded from "@mui/icons-material/CreateNewFolderRounded";
 import Tooltip from "@mui/material/Tooltip";
 import Backdrop from "@mui/material/Backdrop";
 import Back from "@mui/icons-material/ChevronLeftRounded";
@@ -26,12 +27,13 @@ import {
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 
 import { PlaylistItem } from "./PlaylistItem";
+import { FolderItem } from "./FolderItem";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../app/store";
-import { movePlaylist, Track, addPlaylist, addTracks } from "./playlistsSlice";
+import { movePlaylist, moveFolder, Track, addPlaylist, addTracks } from "./playlistsSlice";
 import { PlaylistAdd } from "./PlaylistAdd";
+import { FolderAdd } from "./FolderAdd";
 import { SortableItem } from "../../common/SortableItem";
-import { startQueue } from "./playlistPlaybackSlice";
 import { useFolderDrop } from "../../common/useFolderDrop";
 import { getRandomBackground } from "../../backgrounds";
 import { useHideScrollbar } from "../../../renderer/common/useHideScrollbar";
@@ -64,26 +66,54 @@ export function Playlists({ onPlay }: PlaylistsProps) {
 
   const sensors = useSensors(pointerSensor, keyboardSensor);
 
-  const items = playlists.playlists.allIds.map(
-    (id) => playlists.playlists.byId[id]
+  // Get folders
+  const folders = playlists.folders.allIds.map(
+    (id) => playlists.folders.byId[id]
   );
 
+  // Get playlists not in any folder
+  const rootPlaylists = playlists.playlists.allIds
+    .filter((id) => !playlists.playlists.byId[id].folderId)
+    .map((id) => playlists.playlists.byId[id]);
+
+  // Helper to count playlists in a folder
+  const getPlaylistCountInFolder = (folderId: string) => {
+    return playlists.playlists.allIds.filter(
+      (id) => playlists.playlists.byId[id].folderId === folderId
+    ).length;
+  };
+
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragType, setDragType] = useState<"folder" | "playlist" | null>(null);
+
   function handleDragStart(event: DragStartEvent) {
-    setDragId(event.active.id);
+    const id = event.active.id as string;
+    setDragId(id);
+    // Determine if dragging a folder or playlist
+    if (playlists.folders.byId[id]) {
+      setDragType("folder");
+    } else {
+      setDragType("playlist");
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
-      dispatch(movePlaylist({ active: active.id, over: over.id }));
+    if (over && active.id !== over.id) {
+      if (dragType === "folder") {
+        dispatch(moveFolder({ active: active.id as string, over: over.id as string }));
+      } else {
+        dispatch(movePlaylist({ active: active.id as string, over: over.id as string }));
+      }
     }
 
     setDragId(null);
+    setDragType(null);
   }
 
   const [addOpen, setAddOpen] = useState(false);
+  const [folderAddOpen, setFolderAddOpen] = useState(false);
 
   const { dragging, containerListeners, overlayListeners } = useFolderDrop(
     (directories) => {
@@ -133,11 +163,18 @@ export function Playlists({ onPlay }: PlaylistsProps) {
           <Typography variant="h3" noWrap>
             Playlists
           </Typography>
-          <Tooltip title="Add Playlist">
-            <IconButton onClick={() => setAddOpen(true)}>
-              <AddRounded />
-            </IconButton>
-          </Tooltip>
+          <Stack direction="row">
+            <Tooltip title="Add Folder">
+              <IconButton onClick={() => setFolderAddOpen(true)}>
+                <CreateNewFolderRounded />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Add Playlist">
+              <IconButton onClick={() => setAddOpen(true)}>
+                <AddRounded />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Stack>
         <Grid
           container
@@ -159,8 +196,23 @@ export function Playlists({ onPlay }: PlaylistsProps) {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={items} strategy={rectSortingStrategy}>
-              {items.map((playlist) => (
+            {/* Folders */}
+            <SortableContext items={folders} strategy={rectSortingStrategy}>
+              {folders.map((folder) => (
+                <Grid item xs={2} sm={3} md={3} key={folder.id}>
+                  <SortableItem id={folder.id}>
+                    <FolderItem
+                      folder={folder}
+                      playlistCount={getPlaylistCountInFolder(folder.id)}
+                      onSelect={(id) => navigate(`/folders/${id}`)}
+                    />
+                  </SortableItem>
+                </Grid>
+              ))}
+            </SortableContext>
+            {/* Root Playlists (not in any folder) */}
+            <SortableContext items={rootPlaylists} strategy={rectSortingStrategy}>
+              {rootPlaylists.map((playlist) => (
                 <Grid item xs={2} sm={3} md={3} key={playlist.id}>
                   <SortableItem id={playlist.id}>
                     <PlaylistItem
@@ -171,16 +223,22 @@ export function Playlists({ onPlay }: PlaylistsProps) {
                   </SortableItem>
                 </Grid>
               ))}
-              <DragOverlay>
-                {dragId ? (
-                  <PlaylistItem
-                    playlist={playlists.playlists.byId[dragId]}
-                    onSelect={() => {}}
-                    onPlay={() => {}}
-                  />
-                ) : null}
-              </DragOverlay>
             </SortableContext>
+            <DragOverlay>
+              {dragId && dragType === "folder" ? (
+                <FolderItem
+                  folder={playlists.folders.byId[dragId]}
+                  playlistCount={getPlaylistCountInFolder(dragId)}
+                  onSelect={() => {}}
+                />
+              ) : dragId && dragType === "playlist" ? (
+                <PlaylistItem
+                  playlist={playlists.playlists.byId[dragId]}
+                  onSelect={() => {}}
+                  onPlay={() => {}}
+                />
+              ) : null}
+            </DragOverlay>
           </DndContext>
         </Grid>
         <Backdrop
@@ -194,6 +252,7 @@ export function Playlists({ onPlay }: PlaylistsProps) {
         </Backdrop>
       </Container>
       <PlaylistAdd open={addOpen} onClose={() => setAddOpen(false)} />
+      <FolderAdd open={folderAddOpen} onClose={() => setFolderAddOpen(false)} />
     </>
   );
 }

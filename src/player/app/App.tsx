@@ -13,6 +13,7 @@ import { PlaylistRemote } from "../features/playlists/PlaylistRemote";
 import { PlaylistPlaybackSync } from "../features/playlists/PlaylistPlaybackSync";
 import { Playlists } from "../features/playlists/Playlists";
 import { Playlist } from "../features/playlists/Playlist";
+import { Folder } from "../features/playlists/Folder";
 
 import "../../renderer/app/App.css";
 import { Home } from "../features/home/Home";
@@ -61,6 +62,10 @@ export function App() {
         <Route
           path="playlists/:playlistId"
           element={<Playlist onPlay={playlist.play} />}
+        />
+        <Route
+          path="folders/:folderId"
+          element={<Folder onPlay={playlist.play} />}
         />
         <Route
           path="soundboards"
