@@ -1,10 +1,15 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import styled from "@mui/material/styles/styled";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import Container from "@mui/material/Container";
+import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
+import IconButton from "@mui/material/IconButton";
+import SearchIcon from "@mui/icons-material/SearchRounded";
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 
 import { Player } from "../features/player/Player";
 import { usePlaylistPlayback } from "../features/playlists/usePlaylistPlayback";
@@ -38,6 +43,7 @@ const WallPaper = styled("div")({
 
 export function App() {
   const [errorMessage, setErrorMessage] = useState<string>();
+  const navigate = useNavigate();
 
   const handleError = useCallback((message: string) => {
     setErrorMessage(message);
@@ -46,9 +52,41 @@ export function App() {
   const playlist = usePlaylistPlayback(handleError);
   const soundboard = useSoundboardPlayback(handleError);
 
+  // Allow external windows (renderer) to request navigation (e.g., open Search)
+  useEffect(() => {
+    const handler = (args: any[]) => {
+      const to = args?.[0];
+      if (typeof to === "string") {
+        navigate(to);
+      }
+    };
+    // @ts-ignore channel is exposed via preload
+    window.kenku?.on?.("PLAYER_NAVIGATE", handler);
+    return () => {
+      // @ts-ignore
+      window.kenku?.removeAllListeners?.("PLAYER_NAVIGATE");
+    };
+  }, [navigate]);
+
   return (
     <>
       <WallPaper />
+      <Container
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+          mt: 2,
+        }}
+      >
+        <Stack direction="row" justifyContent="flex-end" alignItems="center">
+          <Tooltip title="Search">
+            <IconButton onClick={() => navigate("/search")}>
+              <SearchIcon />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Container>
       <Routes>
         <Route
           path="/"

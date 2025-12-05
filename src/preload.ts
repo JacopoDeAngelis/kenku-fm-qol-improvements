@@ -22,7 +22,8 @@ type Channel =
   | "BROWSER_VIEW_MEDIA_PAUSED"
   | "BROWSER_VIEW_NEW_TAB"
   | "BROWSER_VIEW_CLOSE_TAB"
-  | "PLAYER_REMOTE_ENABLED";
+  | "PLAYER_REMOTE_ENABLED"
+  | "PLAYER_NAVIGATE";
 
 const validChannels: Channel[] = [
   "ERROR",
@@ -43,6 +44,7 @@ const validChannels: Channel[] = [
   "BROWSER_VIEW_NEW_TAB",
   "BROWSER_VIEW_CLOSE_TAB",
   "PLAYER_REMOTE_ENABLED",
+  "PLAYER_NAVIGATE",
 ];
 
 // Capture audio when new views are loaded
@@ -142,6 +144,9 @@ const api = {
   },
   playerStopRemote: () => {
     ipcRenderer.send("PLAYER_STOP_REMOTE");
+  },
+  openPlayerSearch: () => {
+    ipcRenderer.send("PLAYER_OPEN_SEARCH");
   },
   setLoopback: (loopback: boolean) => {
     ipcRenderer.send("AUDIO_CAPTURE_SET_LOOPBACK", loopback);

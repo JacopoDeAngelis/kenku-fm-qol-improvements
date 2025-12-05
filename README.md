@@ -79,6 +79,11 @@ The `preload.ts` file and `preload` folder contains code for the preload script 
 The `player` folder contains the code for the built in audio player. This runs as a separate web view and is loaded as a separate entry point in the `forge.config.js`. The player app is written in React and also uses Redux Toolkit for state management.
 
 ## Added quality of life features
+### Search
+![Search](docs/search.png)
+Search is available in the player and the browser views.
+It can be used to search for folders, playlists, soundboards and tracks.
+
 ### Folders
 ![Folders](docs/folders.png)
 Folders are created using the button on the top right of the player.

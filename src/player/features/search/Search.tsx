@@ -40,30 +40,73 @@ interface PlaylistResult {
   title: string;
   background: string;
   trackCount: number;
+  path: string;
 }
 
 interface TrackResult {
   track: Track;
-  playlists: { id: string; title: string }[];
+  playlists: { id: string; title: string; path: string }[];
+}
+
+type FolderKind = "playlist" | "soundboard";
+
+interface FolderResult {
+  id: string;
+  title: string;
+  background: string;
+  path: string;
+  kind: FolderKind;
+}
+
+interface SoundboardResult {
+  id: string;
+  title: string;
+  background: string;
+  path: string;
 }
 
 export function Search() {
   const navigate = useNavigate();
   const playlists = useSelector((state: RootState) => state.playlists);
+  const soundboards = useSelector((state: RootState) => state.soundboards);
   const [searchQuery, setSearchQuery] = useState("");
   const [tabValue, setTabValue] = useState(0);
+
+  const getPlaylistPath = (playlistId: string): string => {
+    const playlist = playlists.playlists.byId[playlistId];
+    if (!playlist) return "";
+    const segments: string[] = [];
+    let folderId = playlist.folderId;
+    while (folderId) {
+      const folder = playlists.folders.byId[folderId];
+      if (!folder) break;
+      segments.push(folder.title);
+      folderId = folder.parentId;
+    }
+    const parts = segments.reverse();
+    // Always include the playlist title at the end
+    parts.push(playlist.title);
+    return `/${parts.join("/")}`;
+  };
 
   const playlistResults = useMemo<PlaylistResult[]>(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
     return playlists.playlists.allIds
       .map((id: string) => playlists.playlists.byId[id])
-      .filter((playlist) => playlist.title.toLowerCase().includes(query))
+      .filter((playlist) => {
+        const titleMatch = playlist.title.toLowerCase().includes(query);
+        // Also allow matching by folder path segments
+        const pathText = getPlaylistPath(playlist.id).toLowerCase();
+        const pathMatch = pathText.includes(query);
+        return titleMatch || pathMatch;
+      })
       .map((playlist) => ({
         id: playlist.id,
         title: playlist.title,
         background: playlist.background,
         trackCount: playlist.tracks.length,
+        path: getPlaylistPath(playlist.id),
       }));
   }, [searchQuery, playlists]);
 
@@ -83,12 +126,19 @@ export function Search() {
             trackMap.get(trackId)!.playlists.push({
               id: playlist.id,
               title: playlist.title,
+              path: getPlaylistPath(playlist.id),
             });
           } else {
             // First occurrence of this track
             trackMap.set(trackId, {
               track,
-              playlists: [{ id: playlist.id, title: playlist.title }],
+              playlists: [
+                {
+                  id: playlist.id,
+                  title: playlist.title,
+                  path: getPlaylistPath(playlist.id),
+                },
+              ],
             });
           }
         }
@@ -97,6 +147,113 @@ export function Search() {
 
     return Array.from(trackMap.values());
   }, [searchQuery, playlists]);
+
+  // Folder search (playlists folders)
+  const getFolderPath = (folderId: string): string => {
+    const segments: string[] = [];
+    let currentId: string | undefined = folderId;
+    while (currentId) {
+      const folder = playlists.folders.byId[currentId];
+      if (!folder) break;
+      segments.push(folder.title);
+      currentId = folder.parentId;
+    }
+    return `/${segments.reverse().join("/")}`;
+  };
+
+  const playlistFolderResults = useMemo<FolderResult[]>(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return playlists.folders.allIds
+      .map((id: string) => playlists.folders.byId[id])
+      .filter((folder) => {
+        const titleMatch = folder.title.toLowerCase().includes(query);
+        const pathMatch = getFolderPath(folder.id).toLowerCase().includes(query);
+        return titleMatch || pathMatch;
+      })
+      .map((folder) => ({
+        id: folder.id,
+        title: folder.title,
+        background: folder.background,
+        path: getFolderPath(folder.id),
+        kind: "playlist" as const,
+      }));
+  }, [searchQuery, playlists]);
+
+  // Soundboard search
+  const getSoundboardPath = (soundboardId: string): string => {
+    const sb = soundboards.soundboards.byId[soundboardId];
+    if (!sb) return "";
+    const segments: string[] = [];
+    let folderId = sb.folderId;
+    while (folderId) {
+      const folder = soundboards.folders.byId[folderId];
+      if (!folder) break;
+      segments.push(folder.title);
+      folderId = folder.parentId;
+    }
+    const parts = segments.reverse();
+    parts.push(sb.title);
+    return `/${parts.join("/")}`;
+  };
+
+  const soundboardResults = useMemo<SoundboardResult[]>(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return soundboards.soundboards.allIds
+      .map((id: string) => soundboards.soundboards.byId[id])
+      .filter((sb) => {
+        const titleMatch = sb.title.toLowerCase().includes(query);
+        const pathMatch = getSoundboardPath(sb.id).toLowerCase().includes(query);
+        return titleMatch || pathMatch;
+      })
+      .map((sb) => ({
+        id: sb.id,
+        title: sb.title,
+        background: sb.background,
+        path: getSoundboardPath(sb.id),
+      }));
+  }, [searchQuery, soundboards]);
+
+  // Soundboard folders
+  const getSoundboardFolderPath = (folderId: string): string => {
+    const segments: string[] = [];
+    let currentId: string | undefined = folderId;
+    while (currentId) {
+      const folder = soundboards.folders.byId[currentId];
+      if (!folder) break;
+      segments.push(folder.title);
+      currentId = folder.parentId;
+    }
+    return `/${segments.reverse().join("/")}`;
+  };
+
+  const soundboardFolderResults = useMemo<FolderResult[]>(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return soundboards.folders.allIds
+      .map((id: string) => soundboards.folders.byId[id])
+      .filter((folder) => {
+        const titleMatch = folder.title.toLowerCase().includes(query);
+        const pathMatch = getSoundboardFolderPath(folder.id)
+          .toLowerCase()
+          .includes(query);
+        return titleMatch || pathMatch;
+      })
+      .map((folder) => ({
+        id: folder.id,
+        title: folder.title,
+        background: folder.background,
+        path: getSoundboardFolderPath(folder.id),
+        kind: "soundboard" as const,
+      }));
+  }, [searchQuery, soundboards]);
+
+  // Combined folder results for a single Folders tab
+  const folderResults = useMemo<FolderResult[]>(() => {
+    if (!searchQuery.trim()) return [];
+    return [...playlistFolderResults, ...soundboardFolderResults];
+  }, [playlistFolderResults, soundboardFolderResults, searchQuery]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -108,6 +265,18 @@ export function Search() {
 
   const handleTrackClick = (playlistId: string) => {
     navigate(`/playlists/${playlistId}`);
+  };
+
+  const handleFolderClick = (folder: FolderResult) => {
+    if (folder.kind === "playlist") {
+      navigate(`/folders/${folder.id}`);
+    } else {
+      navigate(`/soundboard-folders/${folder.id}`);
+    }
+  };
+
+  const handleSoundboardClick = (soundboardId: string) => {
+    navigate(`/soundboards/${soundboardId}`);
   };
 
   return (
@@ -141,7 +310,7 @@ export function Search() {
           <TextField
             fullWidth
             variant="outlined"
-            placeholder="Search playlists or tracks..."
+            placeholder="Search playlists, folders, soundboards, or tracks..."
             value={searchQuery}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
             InputProps={{
@@ -164,6 +333,8 @@ export function Search() {
           <Tabs value={tabValue} onChange={handleTabChange}>
             <Tab label={`Playlists (${playlistResults.length})`} />
             <Tab label={`Tracks (${trackResults.length})`} />
+            <Tab label={`Folders (${folderResults.length})`} />
+            <Tab label={`Soundboards (${soundboardResults.length})`} />
           </Tabs>
         </Box>
 
@@ -220,7 +391,7 @@ export function Search() {
                         />
                         <ListItemText
                           primary={playlist.title}
-                          secondary={`${playlist.trackCount} track${playlist.trackCount !== 1 ? "s" : ""}`}
+                          secondary={`${playlist.path} • ${playlist.trackCount} track${playlist.trackCount !== 1 ? "s" : ""}`}
                         />
                       </ListItemButton>
                     </Paper>
@@ -263,7 +434,7 @@ export function Search() {
                         Found in:
                       </Typography>
                       <Stack direction="row" flexWrap="wrap" gap={1} mt={1}>
-                        {result.playlists.map((playlist: { id: string; title: string }) => (
+                        {result.playlists.map((playlist: { id: string; title: string; path: string }) => (
                           <Paper
                             key={playlist.id}
                             sx={{
@@ -278,7 +449,7 @@ export function Search() {
                             onClick={() => handleTrackClick(playlist.id)}
                           >
                             <Typography variant="body2">
-                              {playlist.title}
+                              {playlist.path}
                             </Typography>
                           </Paper>
                         ))}
@@ -289,6 +460,112 @@ export function Search() {
               ))}
             </List>
           )}
+
+            {tabValue === 2 && (
+              <List sx={{ maxWidth: 720, margin: "0 auto" }}>
+                {folderResults.length === 0 && searchQuery.trim() && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    textAlign="center"
+                    sx={{ mt: 4 }}
+                  >
+                    No folders found
+                  </Typography>
+                )}
+                {folderResults.map((folder: FolderResult) => {
+                  const image = isBackground(folder.background)
+                    ? backgrounds[folder.background]
+                    : folder.background;
+                  return (
+                    <ListItem key={folder.id} disablePadding>
+                      <Paper
+                        sx={{
+                          width: "100%",
+                          m: 0.5,
+                          backgroundColor: "rgba(34, 38, 57, 0.8)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <ListItemButton
+                          onClick={() => handleFolderClick(folder)}
+                          sx={{ borderRadius: "16px" }}
+                        >
+                          <Box
+                            component="img"
+                            src={image}
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: 1,
+                              mr: 2,
+                              objectFit: "cover",
+                            }}
+                          />
+                          <ListItemText
+                            primary={folder.title}
+                            secondary={`${folder.path} • ${folder.kind === "playlist" ? "Playlist" : "Soundboard"} folder`}
+                          />
+                        </ListItemButton>
+                      </Paper>
+                    </ListItem>
+                  );
+                })}
+              </List>
+            )}
+
+            {tabValue === 3 && (
+              <List sx={{ maxWidth: 720, margin: "0 auto" }}>
+                {soundboardResults.length === 0 && searchQuery.trim() && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    textAlign="center"
+                    sx={{ mt: 4 }}
+                  >
+                    No soundboards found
+                  </Typography>
+                )}
+                {soundboardResults.map((sb: SoundboardResult) => {
+                  const image = isBackground(sb.background)
+                    ? backgrounds[sb.background]
+                    : sb.background;
+                  return (
+                    <ListItem key={sb.id} disablePadding>
+                      <Paper
+                        sx={{
+                          width: "100%",
+                          m: 0.5,
+                          backgroundColor: "rgba(34, 38, 57, 0.8)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <ListItemButton
+                          onClick={() => handleSoundboardClick(sb.id)}
+                          sx={{ borderRadius: "16px" }}
+                        >
+                          <Box
+                            component="img"
+                            src={image}
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: 1,
+                              mr: 2,
+                              objectFit: "cover",
+                            }}
+                          />
+                          <ListItemText
+                            primary={sb.title}
+                            secondary={sb.path}
+                          />
+                        </ListItemButton>
+                      </Paper>
+                    </ListItem>
+                  );
+                })}
+              </List>
+            )}
         </Box>
       </Container>
     </>

@@ -77,13 +77,7 @@ export function Home({ onPlayTrack, onPlaySound }: HomeProps) {
         mb: "248px",
       }}
     >
-      <Stack direction="row" justifyContent="flex-end" alignItems="center">
-        <Tooltip title="Search">
-          <IconButton onClick={() => navigate("/search")}>
-            <SearchIcon />
-          </IconButton>
-        </Tooltip>
-      </Stack>
+      {/* Search CTA moved to global header in App.tsx */}
       <Card>
         <CardContent>
           <Stack

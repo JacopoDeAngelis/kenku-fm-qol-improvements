@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import SettingsIcon from "@mui/icons-material/SettingsRounded";
+import SearchIcon from "@mui/icons-material/SearchRounded";
 import { Toolbar, Stack, Typography, Link } from "@mui/material";
 import { OutputListItems } from "../features/output/OutputListItems";
 import { InputListItems } from "../features/input/InputListItems";
@@ -60,6 +61,12 @@ export function ActionDrawer() {
               <img src={icon} />
             </Box>
           )}
+          <IconButton
+            onClick={() => window.kenku.openPlayerSearch()}
+            sx={{ WebkitAppRegion: "no-drag" }}
+          >
+            <SearchIcon />
+          </IconButton>
           <IconButton
             onClick={() => setSettingsOpen(true)}
             sx={{ WebkitAppRegion: "no-drag" }}

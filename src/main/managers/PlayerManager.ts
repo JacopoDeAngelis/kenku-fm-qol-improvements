@@ -17,6 +17,7 @@ export class PlayerManager {
     ipcMain.on("PLAYER_REGISTER_VIEW", this._handleRegisterView);
     ipcMain.on("PLAYER_START_REMOTE", this._handleStartRemote);
     ipcMain.on("PLAYER_STOP_REMOTE", this._handleStopRemote);
+    ipcMain.on("PLAYER_OPEN_SEARCH", this._handleOpenSearch);
   }
 
   destroy() {
@@ -25,6 +26,7 @@ export class PlayerManager {
     ipcMain.off("PLAYER_REGISTER_VIEW", this._handleRegisterView);
     ipcMain.off("PLAYER_START_REMOTE", this._handleStartRemote);
     ipcMain.off("PLAYER_STOP_REMOTE", this._handleStopRemote);
+    ipcMain.off("PLAYER_OPEN_SEARCH", this._handleOpenSearch);
     this.stopRemote();
   }
 
@@ -93,5 +95,18 @@ export class PlayerManager {
 
   _handleRegisterView = (_: Electron.IpcMainEvent, viewId: number) => {
     this.registeredViewId = viewId;
+  };
+
+  _handleOpenSearch = () => {
+    const view = this.getView();
+    if (view) {
+      const win = BrowserWindow.fromWebContents(view);
+      if (win) {
+        if (win.isMinimized()) win.restore();
+        win.show();
+        win.focus();
+      }
+      view.send("PLAYER_NAVIGATE", "/search");
+    }
   };
 }
