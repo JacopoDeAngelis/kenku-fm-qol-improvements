@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import AddIcon from "@mui/icons-material/AddCircleRounded";
+import CreateNewFolderRounded from "@mui/icons-material/CreateNewFolderRounded";
 import SearchIcon from "@mui/icons-material/SearchRounded";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
@@ -23,10 +24,12 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 
 import { RootState } from "../../app/store";
 import { PlaylistAdd } from "../playlists/PlaylistAdd";
+import { FolderAdd } from "../playlists/FolderAdd";
 import { PlaylistItem } from "../playlists/PlaylistItem";
 import { Track } from "../playlists/playlistsSlice";
 import { SoundboardAdd } from "../soundboards/SoundboardAdd";
 import { SoundboardItem } from "../soundboards/SoundboardItem";
+import { SoundboardFolderAdd } from "../soundboards/SoundboardFolderAdd";
 import { Sound } from "../soundboards/soundboardsSlice";
 
 const PlaylistsLink = React.forwardRef<
@@ -61,6 +64,8 @@ export function Home({ onPlayTrack, onPlaySound }: HomeProps) {
 
   const [playlistAddOpen, setPlaylistAddOpen] = useState(false);
   const [soundboardAddOpen, setSoundboardAddOpen] = useState(false);
+  const [playlistFolderAddOpen, setPlaylistFolderAddOpen] = useState(false);
+  const [soundboardFolderAddOpen, setSoundboardFolderAddOpen] = useState(false);
 
   return (
     <Container
@@ -90,11 +95,18 @@ export function Home({ onPlayTrack, onPlaySound }: HomeProps) {
             <Typography variant="h5" component="div">
               Playlists
             </Typography>
-            <Tooltip title="Add Playlist">
-              <IconButton onClick={() => setPlaylistAddOpen(true)}>
-                <AddIcon />
-              </IconButton>
-            </Tooltip>
+            <Stack direction="row">
+              <Tooltip title="Add Folder">
+                <IconButton onClick={() => setPlaylistFolderAddOpen(true)}>
+                  <CreateNewFolderRounded />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Add Playlist">
+                <IconButton onClick={() => setPlaylistAddOpen(true)}>
+                  <AddIcon />
+                </IconButton>
+              </Tooltip>
+            </Stack>
             <Box sx={{ flexGrow: 1 }} />
             <Link color="inherit" underline="hover" component={PlaylistsLink}>
               See All
@@ -126,11 +138,18 @@ export function Home({ onPlayTrack, onPlaySound }: HomeProps) {
             <Typography variant="h5" component="div">
               Soundboards
             </Typography>
-            <Tooltip title="Add Soundboard">
-              <IconButton onClick={() => setSoundboardAddOpen(true)}>
-                <AddIcon />
-              </IconButton>
-            </Tooltip>
+            <Stack direction="row">
+              <Tooltip title="Add Folder">
+                <IconButton onClick={() => setSoundboardFolderAddOpen(true)}>
+                  <CreateNewFolderRounded />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Add Soundboard">
+                <IconButton onClick={() => setSoundboardAddOpen(true)}>
+                  <AddIcon />
+                </IconButton>
+              </Tooltip>
+            </Stack>
             <Box sx={{ flexGrow: 1 }} />
             <Link color="inherit" underline="hover" component={SoundboardsLink}>
               See All
@@ -155,9 +174,17 @@ export function Home({ onPlayTrack, onPlaySound }: HomeProps) {
         open={playlistAddOpen}
         onClose={() => setPlaylistAddOpen(false)}
       />
+      <FolderAdd
+        open={playlistFolderAddOpen}
+        onClose={() => setPlaylistFolderAddOpen(false)}
+      />
       <SoundboardAdd
         open={soundboardAddOpen}
         onClose={() => setSoundboardAddOpen(false)}
+      />
+      <SoundboardFolderAdd
+        open={soundboardFolderAddOpen}
+        onClose={() => setSoundboardFolderAddOpen(false)}
       />
     </Container>
   );

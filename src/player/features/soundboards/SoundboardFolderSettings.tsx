@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Dialog from "@mui/material/Dialog";
@@ -6,50 +6,42 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 
-import { v4 as uuid } from "uuid";
-
 import { useDispatch } from "react-redux";
-import { addSoundboard } from "./soundboardsSlice";
-
-import { backgrounds } from "../../backgrounds";
+import { editFolder, Folder } from "./soundboardsSlice";
 import { ImageSelector } from "../../common/ImageSelector";
 
-type SoundboardAddProps = {
+type SoundboardFolderSettingsProps = {
+  folder: Folder;
   open: boolean;
   onClose: () => void;
-  folderId?: string;
 };
 
-export function SoundboardAdd({ open, onClose, folderId }: SoundboardAddProps) {
+export function SoundboardFolderSettings({
+  folder,
+  open,
+  onClose,
+}: SoundboardFolderSettingsProps) {
   const dispatch = useDispatch();
 
-  const [title, setTitle] = useState("");
-  const [background, setBackground] = useState(Object.keys(backgrounds)[0]);
-
-  useEffect(() => {
-    if (!open) {
-      setTitle("");
-    }
-  }, [open]);
-
   function handleTitleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    setTitle(event.target.value);
+    dispatch(editFolder({ id: folder.id, title: event.target.value }));
+  }
+
+  function handleBackgroundChange(background: string) {
+    dispatch(editFolder({ id: folder.id, background }));
   }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const id = uuid();
-    dispatch(addSoundboard({ id, title, background, sounds: [], folderId }));
     onClose();
   }
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Add Soundboard</DialogTitle>
+      <DialogTitle>Edit Folder</DialogTitle>
       <form onSubmit={handleSubmit}>
         <DialogContent>
           <TextField
-            autoFocus
             margin="dense"
             id="name"
             label="Name"
@@ -59,16 +51,13 @@ export function SoundboardAdd({ open, onClose, folderId }: SoundboardAddProps) {
             InputLabelProps={{
               shrink: true,
             }}
-            value={title}
+            value={folder.title}
             onChange={handleTitleChange}
           />
-          <ImageSelector value={background} onChange={setBackground} />
+          <ImageSelector value={folder.background} onChange={handleBackgroundChange} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button disabled={!title || !background} type="submit">
-            Add
-          </Button>
+          <Button type="submit">Done</Button>
         </DialogActions>
       </form>
     </Dialog>

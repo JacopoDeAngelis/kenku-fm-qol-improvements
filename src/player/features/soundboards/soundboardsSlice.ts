@@ -15,6 +15,14 @@ export interface Soundboard {
   background: string;
   title: string;
   id: string;
+  folderId?: string;
+}
+
+export interface Folder {
+  id: string;
+  title: string;
+  background: string;
+  parentId?: string;
 }
 
 export interface SoundboardsState {
@@ -22,11 +30,19 @@ export interface SoundboardsState {
     byId: Record<string, Soundboard>;
     allIds: string[];
   };
+  folders: {
+    byId: Record<string, Folder>;
+    allIds: string[];
+  };
   sounds: Record<string, Sound>;
 }
 
 const initialState: SoundboardsState = {
   soundboards: {
+    byId: {},
+    allIds: [],
+  },
+  folders: {
     byId: {},
     allIds: [],
   },
@@ -121,6 +137,87 @@ export const soundboardsSlice = createSlice({
       soundboard.sounds.splice(oldIndex, 1);
       soundboard.sounds.splice(newIndex, 0, action.payload.active);
     },
+    // Folder actions
+    addFolder: (state, action: PayloadAction<Folder>) => {
+      state.folders.byId[action.payload.id] = action.payload;
+      state.folders.allIds.push(action.payload.id);
+    },
+    removeFolder: (state, action: PayloadAction<string>) => {
+      // Recursively remove folders and clear folderId on soundboards they contain
+      const targetId = action.payload;
+      const toDelete: Set<string> = new Set();
+      const visit = (id: string) => {
+        toDelete.add(id);
+        for (const childId of state.folders.allIds) {
+          const child = state.folders.byId[childId];
+          if (child && child.parentId === id) {
+            visit(childId);
+          }
+        }
+      };
+      visit(targetId);
+
+      // Clear folderId on soundboards inside any of the folders being deleted
+      for (const sbId of state.soundboards.allIds) {
+        const sb = state.soundboards.byId[sbId];
+        if (sb.folderId && toDelete.has(sb.folderId)) {
+          sb.folderId = undefined;
+        }
+      }
+
+      // Delete folders
+      for (const id of Array.from(toDelete)) {
+        delete state.folders.byId[id];
+      }
+      state.folders.allIds = state.folders.allIds.filter((id) => !toDelete.has(id));
+    },
+    editFolder: (state, action: PayloadAction<Partial<Folder>>) => {
+      if (!action.payload.id) {
+        throw Error("Id needed in editFolder payload");
+      }
+      state.folders.byId[action.payload.id] = {
+        ...state.folders.byId[action.payload.id],
+        ...action.payload,
+      } as Folder;
+    },
+    moveFolder: (
+      state,
+      action: PayloadAction<{ active: string; over: string }>
+    ) => {
+      const oldIndex = state.folders.allIds.indexOf(action.payload.active);
+      const newIndex = state.folders.allIds.indexOf(action.payload.over);
+      state.folders.allIds.splice(oldIndex, 1);
+      state.folders.allIds.splice(newIndex, 0, action.payload.active);
+    },
+    moveFolderToFolder: (
+      state,
+      action: PayloadAction<{ folderId: string; parentId: string | undefined }>
+    ) => {
+      const { folderId, parentId } = action.payload;
+      const isDescendant = (candidateId: string, targetId: string): boolean => {
+        if (!candidateId) return false;
+        let current = state.folders.byId[candidateId]?.parentId;
+        while (current) {
+          if (current === targetId) return true;
+          current = state.folders.byId[current]?.parentId;
+        }
+        return false;
+      };
+      if (parentId === folderId) return;
+      if (parentId && isDescendant(parentId, folderId)) return;
+      if (state.folders.byId[folderId]) {
+        state.folders.byId[folderId].parentId = parentId;
+      }
+    },
+    moveSoundboardToFolder: (
+      state,
+      action: PayloadAction<{ soundboardId: string; folderId: string | undefined }>
+    ) => {
+      const { soundboardId, folderId } = action.payload;
+      if (state.soundboards.byId[soundboardId]) {
+        state.soundboards.byId[soundboardId].folderId = folderId;
+      }
+    },
   },
 });
 
@@ -134,6 +231,12 @@ export const {
   removeSound,
   editSound,
   moveSound,
+  addFolder,
+  removeFolder,
+  editFolder,
+  moveFolder,
+  moveFolderToFolder,
+  moveSoundboardToFolder,
 } = soundboardsSlice.actions;
 
 export default soundboardsSlice.reducer;

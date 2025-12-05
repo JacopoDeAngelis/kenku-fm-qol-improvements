@@ -19,6 +19,7 @@ import "../../renderer/app/App.css";
 import { Home } from "../features/home/Home";
 import { Soundboards } from "../features/soundboards/Soundboards";
 import { Soundboard } from "../features/soundboards/Soundboard";
+import { SoundboardFolder } from "../features/soundboards/SoundboardFolder";
 import { useSoundboardPlayback } from "../features/soundboards/useSoundboardPlayback";
 import { SoundboardRemote } from "../features/soundboards/SoundboardRemote";
 import { SoundboardPlaybackSync } from "../features/soundboards/SoundboardPlaybackSync";
@@ -70,6 +71,10 @@ export function App() {
         <Route
           path="soundboards"
           element={<Soundboards onPlay={soundboard.play} />}
+        />
+        <Route
+          path="soundboard-folders/:folderId"
+          element={<SoundboardFolder onPlay={soundboard.play} />}
         />
         <Route
           path="soundboards/:soundboardId"

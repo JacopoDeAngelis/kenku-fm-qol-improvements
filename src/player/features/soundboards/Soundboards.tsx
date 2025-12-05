@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuid } from "uuid";
 
 import AddRounded from "@mui/icons-material/AddCircleRounded";
+import CreateNewFolderRounded from "@mui/icons-material/CreateNewFolderRounded";
 import Back from "@mui/icons-material/ChevronLeftRounded";
 import Backdrop from "@mui/material/Backdrop";
 import Container from "@mui/material/Container";
@@ -34,11 +35,14 @@ import { SortableItem } from "../../common/SortableItem";
 import { useFolderDrop } from "../../common/useFolderDrop";
 import { SoundboardAdd } from "./SoundboardAdd";
 import { SoundboardItem } from "./SoundboardItem";
+import { SoundboardFolderAdd } from "./SoundboardFolderAdd";
+import { SoundboardFolderItem } from "./SoundboardFolderItem";
 import {
   Sound,
   addSoundboard,
   addSounds,
   moveSoundboard,
+  moveFolder,
 } from "./soundboardsSlice";
 
 const WallPaper = styled("div")({
@@ -59,9 +63,7 @@ type SoundboardProps = {
 export function Soundboards({ onPlay }: SoundboardProps) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const soundboards = useSelector(
-    (state: RootState) => state.soundboards.soundboards
-  );
+  const sbState = useSelector((state: RootState) => state.soundboards);
 
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 10 },
@@ -70,24 +72,51 @@ export function Soundboards({ onPlay }: SoundboardProps) {
 
   const sensors = useSensors(pointerSensor, keyboardSensor);
 
-  const items = soundboards.allIds.map((id) => soundboards.byId[id]);
+  // Root-level folders (no parent)
+  const folders = sbState.folders.allIds
+    .filter((id) => !sbState.folders.byId[id].parentId)
+    .map((id) => sbState.folders.byId[id]);
+
+  // Root soundboards (no folder)
+  const items = sbState.soundboards.allIds
+    .filter((id) => !sbState.soundboards.byId[id].folderId)
+    .map((id) => sbState.soundboards.byId[id]);
 
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragType, setDragType] = useState<"folder" | "soundboard" | null>(
+    null
+  );
   function handleDragStart(event: DragStartEvent) {
-    setDragId(event.active.id);
+    const id = event.active.id as string;
+    setDragId(id);
+    if (sbState.folders.byId[id]) setDragType("folder");
+    else setDragType("soundboard");
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
-      dispatch(moveSoundboard({ active: active.id, over: over.id }));
+    if (over && active.id !== over.id) {
+      if (dragType === "folder") {
+        dispatch(
+          moveFolder({
+            active: active.id as string,
+            over: over.id as string,
+          })
+        );
+      } else {
+        dispatch(
+          moveSoundboard({ active: active.id as string, over: over.id as string })
+        );
+      }
     }
 
     setDragId(null);
+    setDragType(null);
   }
 
   const [addOpen, setAddOpen] = useState(false);
+  const [folderAddOpen, setFolderAddOpen] = useState(false);
 
   const { dragging, containerListeners, overlayListeners } = useFolderDrop(
     (directories) => {
@@ -148,11 +177,18 @@ export function Soundboards({ onPlay }: SoundboardProps) {
           <Typography variant="h3" noWrap>
             Soundboards
           </Typography>
-          <Tooltip title="Add Soundboard">
-            <IconButton onClick={() => setAddOpen(true)}>
-              <AddRounded />
-            </IconButton>
-          </Tooltip>
+          <Stack direction="row">
+            <Tooltip title="Add Folder">
+              <IconButton onClick={() => setFolderAddOpen(true)}>
+                <CreateNewFolderRounded />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Add Soundboard">
+              <IconButton onClick={() => setAddOpen(true)}>
+                <AddRounded />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Stack>
         <Grid
           container
@@ -174,6 +210,23 @@ export function Soundboards({ onPlay }: SoundboardProps) {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
+            {/* Folders */}
+            <SortableContext items={folders} strategy={rectSortingStrategy}>
+              {folders.map((folder) => (
+                <Grid item xs={2} sm={3} md={3} key={folder.id}>
+                  <SortableItem id={folder.id}>
+                    <SoundboardFolderItem
+                      folder={folder}
+                      soundboardCount={sbState.soundboards.allIds.filter(
+                        (id) => sbState.soundboards.byId[id].folderId === folder.id
+                      ).length}
+                      onSelect={(id) => navigate(`/soundboard-folders/${id}`)}
+                    />
+                  </SortableItem>
+                </Grid>
+              ))}
+            </SortableContext>
+            {/* Root Soundboards */}
             <SortableContext items={items} strategy={rectSortingStrategy}>
               {items.map((soundboard) => (
                 <Grid item xs={2} sm={3} md={3} key={soundboard.id}>
@@ -187,9 +240,17 @@ export function Soundboards({ onPlay }: SoundboardProps) {
                 </Grid>
               ))}
               <DragOverlay>
-                {dragId ? (
+                {dragId && dragType === "folder" ? (
+                  <SoundboardFolderItem
+                    folder={sbState.folders.byId[dragId]}
+                    soundboardCount={sbState.soundboards.allIds.filter(
+                      (id) => sbState.soundboards.byId[id].folderId === dragId
+                    ).length}
+                    onSelect={() => {}}
+                  />
+                ) : dragId && dragType === "soundboard" ? (
                   <SoundboardItem
-                    soundboard={soundboards.byId[dragId]}
+                    soundboard={sbState.soundboards.byId[dragId]}
                     onSelect={() => {}}
                     onPlay={() => {}}
                   />
@@ -209,6 +270,10 @@ export function Soundboards({ onPlay }: SoundboardProps) {
         </Backdrop>
       </Container>
       <SoundboardAdd open={addOpen} onClose={() => setAddOpen(false)} />
+      <SoundboardFolderAdd
+        open={folderAddOpen}
+        onClose={() => setFolderAddOpen(false)}
+      />
     </>
   );
 }

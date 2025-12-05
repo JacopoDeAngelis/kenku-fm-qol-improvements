@@ -9,18 +9,18 @@ import DialogTitle from "@mui/material/DialogTitle";
 import { v4 as uuid } from "uuid";
 
 import { useDispatch } from "react-redux";
-import { addSoundboard } from "./soundboardsSlice";
+import { addFolder } from "./soundboardsSlice";
 
 import { backgrounds } from "../../backgrounds";
 import { ImageSelector } from "../../common/ImageSelector";
 
-type SoundboardAddProps = {
+type SoundboardFolderAddProps = {
   open: boolean;
   onClose: () => void;
-  folderId?: string;
+  parentId?: string;
 };
 
-export function SoundboardAdd({ open, onClose, folderId }: SoundboardAddProps) {
+export function SoundboardFolderAdd({ open, onClose, parentId }: SoundboardFolderAddProps) {
   const dispatch = useDispatch();
 
   const [title, setTitle] = useState("");
@@ -39,13 +39,13 @@ export function SoundboardAdd({ open, onClose, folderId }: SoundboardAddProps) {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const id = uuid();
-    dispatch(addSoundboard({ id, title, background, sounds: [], folderId }));
+    dispatch(addFolder({ id, title, background, parentId }));
     onClose();
   }
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Add Soundboard</DialogTitle>
+      <DialogTitle>Add Folder</DialogTitle>
       <form onSubmit={handleSubmit}>
         <DialogContent>
           <TextField

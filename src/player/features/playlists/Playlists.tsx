@@ -66,10 +66,10 @@ export function Playlists({ onPlay }: PlaylistsProps) {
 
   const sensors = useSensors(pointerSensor, keyboardSensor);
 
-  // Get folders
-  const folders = playlists.folders.allIds.map(
-    (id) => playlists.folders.byId[id]
-  );
+  // Get root-level folders (no parent)
+  const folders = playlists.folders.allIds
+    .filter((id) => !playlists.folders.byId[id].parentId)
+    .map((id) => playlists.folders.byId[id]);
 
   // Get playlists not in any folder
   const rootPlaylists = playlists.playlists.allIds

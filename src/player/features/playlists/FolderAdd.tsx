@@ -17,9 +17,10 @@ import { ImageSelector } from "../../common/ImageSelector";
 type FolderAddProps = {
   open: boolean;
   onClose: () => void;
+  parentId?: string;
 };
 
-export function FolderAdd({ open, onClose }: FolderAddProps) {
+export function FolderAdd({ open, onClose, parentId }: FolderAddProps) {
   const dispatch = useDispatch();
 
   const [title, setTitle] = useState("");
@@ -38,7 +39,7 @@ export function FolderAdd({ open, onClose }: FolderAddProps) {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const id = uuid();
-    dispatch(addFolder({ id, title, background }));
+    dispatch(addFolder({ id, title, background, parentId }));
     onClose();
   }
 

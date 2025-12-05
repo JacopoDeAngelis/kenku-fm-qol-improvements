@@ -18,6 +18,7 @@ export interface Folder {
   id: string;
   title: string;
   background: string;
+  parentId?: string;
 }
 
 export interface PlaylistsState {
@@ -138,15 +139,36 @@ export const playlistsSlice = createSlice({
       state.folders.allIds.push(action.payload.id);
     },
     removeFolder: (state, action: PayloadAction<string>) => {
-      // Remove folder reference from all playlists in this folder
+      // Recursively remove subfolders and clear playlist references
+      const targetId = action.payload;
+
+      // Gather all descendant folder ids (including target)
+      const toDelete: Set<string> = new Set();
+      const visit = (id: string) => {
+        toDelete.add(id);
+        for (const childId of state.folders.allIds) {
+          const child = state.folders.byId[childId];
+          if (child && child.parentId === id) {
+            visit(childId);
+          }
+        }
+      };
+      visit(targetId);
+
+      // Clear folderId on playlists inside any of the folders being deleted
       for (const playlistId of state.playlists.allIds) {
-        if (state.playlists.byId[playlistId].folderId === action.payload) {
-          state.playlists.byId[playlistId].folderId = undefined;
+        const pl = state.playlists.byId[playlistId];
+        if (pl.folderId && toDelete.has(pl.folderId)) {
+          pl.folderId = undefined;
         }
       }
-      delete state.folders.byId[action.payload];
+
+      // Delete folders
+      for (const id of Array.from(toDelete)) {
+        delete state.folders.byId[id];
+      }
       state.folders.allIds = state.folders.allIds.filter(
-        (id) => id !== action.payload
+        (id) => !toDelete.has(id)
       );
     },
     editFolder: (state, action: PayloadAction<Partial<Folder>>) => {
@@ -166,6 +188,28 @@ export const playlistsSlice = createSlice({
       const newIndex = state.folders.allIds.indexOf(action.payload.over);
       state.folders.allIds.splice(oldIndex, 1);
       state.folders.allIds.splice(newIndex, 0, action.payload.active);
+    },
+    moveFolderToFolder: (
+      state,
+      action: PayloadAction<{ folderId: string; parentId: string | undefined }>
+    ) => {
+      const { folderId, parentId } = action.payload;
+      // Prevent moving a folder into itself or its descendants
+      const isDescendant = (candidateId: string, targetId: string): boolean => {
+        if (!candidateId) return false;
+        let current = state.folders.byId[candidateId]?.parentId;
+        while (current) {
+          if (current === targetId) return true;
+          current = state.folders.byId[current]?.parentId;
+        }
+        return false;
+      };
+      if (parentId === folderId) return; // no-op
+      if (parentId && isDescendant(parentId, folderId)) return; // invalid
+
+      if (state.folders.byId[folderId]) {
+        state.folders.byId[folderId].parentId = parentId;
+      }
     },
     movePlaylistToFolder: (
       state,
@@ -191,6 +235,7 @@ export const {
   removeFolder,
   editFolder,
   moveFolder,
+  moveFolderToFolder,
   movePlaylistToFolder,
 } = playlistsSlice.actions;
 

@@ -78,6 +78,13 @@ The `preload.ts` file and `preload` folder contains code for the preload script 
 
 The `player` folder contains the code for the built in audio player. This runs as a separate web view and is loaded as a separate entry point in the `forge.config.js`. The player app is written in React and also uses Redux Toolkit for state management.
 
+## Added quality of life features
+### Folders
+![Folders](docs/folders.png)
+Folders are created using the button on the top right of the player.
+They can be used to organise your playlists or soundboards.
+They can be nested inside other folders.
+
 ## Licence
 
 Kenku FM is licensed under the GNU General Public Licence v3.0.

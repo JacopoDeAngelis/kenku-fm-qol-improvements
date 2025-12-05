@@ -35,50 +35,49 @@ import { backgrounds, isBackground, getRandomBackground } from "../../background
 import { useFolderDrop } from "../../common/useFolderDrop";
 import { SortableItem } from "../../common/SortableItem";
 import { useHideScrollbar } from "../../../renderer/common/useHideScrollbar";
-import { FolderSettings } from "./FolderSettings";
-import { PlaylistAdd } from "./PlaylistAdd";
-import { FolderAdd } from "./FolderAdd";
-import { FolderItem } from "./FolderItem";
-import { PlaylistItem } from "./PlaylistItem";
+import { SoundboardAdd } from "./SoundboardAdd";
+import { SoundboardFolderAdd } from "./SoundboardFolderAdd";
+import { SoundboardFolderSettings } from "./SoundboardFolderSettings";
+import { SoundboardFolderItem } from "./SoundboardFolderItem";
+import { SoundboardItem } from "./SoundboardItem";
 import {
   removeFolder,
-  movePlaylist,
-  addPlaylist,
-  addTracks,
-  Track,
-} from "./playlistsSlice";
-import { startQueue } from "./playlistPlaybackSlice";
+  moveSoundboard,
+  addSoundboard,
+  addSounds,
+  Sound,
+} from "./soundboardsSlice";
 import CreateNewFolderRounded from "@mui/icons-material/CreateNewFolderRounded";
 
-type FolderProps = {
-  onPlay: (track: Track) => void;
+type SoundboardFolderProps = {
+  onPlay: (sound: Sound) => void;
 };
 
-export function Folder({ onPlay }: FolderProps) {
+export function SoundboardFolder({ onPlay }: SoundboardFolderProps) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const playlists = useSelector((state: RootState) => state.playlists);
+  const soundboards = useSelector((state: RootState) => state.soundboards);
   const { folderId } = useParams();
-  const folder = playlists.folders.byId[folderId];
+  const folder = soundboards.folders.byId[folderId];
 
   const [addOpen, setAddOpen] = useState(false);
   const [folderAddOpen, setFolderAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Get playlists in this folder
-  const folderPlaylists = playlists.playlists.allIds
-    .filter((id) => playlists.playlists.byId[id].folderId === folderId)
-    .map((id) => playlists.playlists.byId[id]);
+  // Get soundboards in this folder
+  const folderSoundboards = soundboards.soundboards.allIds
+    .filter((id) => soundboards.soundboards.byId[id].folderId === folderId)
+    .map((id) => soundboards.soundboards.byId[id]);
 
   // Get subfolders in this folder
-  const subfolders = playlists.folders.allIds
-    .filter((id) => playlists.folders.byId[id].parentId === folderId)
-    .map((id) => playlists.folders.byId[id]);
+  const subfolders = soundboards.folders.allIds
+    .filter((id) => soundboards.folders.byId[id].parentId === folderId)
+    .map((id) => soundboards.folders.byId[id]);
 
-  // Helper to count playlists directly inside a folder
-  const getPlaylistCountInFolder = (id: string) =>
-    playlists.playlists.allIds.filter(
-      (pid) => playlists.playlists.byId[pid].folderId === id
+  // Helper to count soundboards directly inside a folder
+  const getSoundboardCountInFolder = (id: string) =>
+    soundboards.soundboards.allIds.filter(
+      (sid) => soundboards.soundboards.byId[sid].folderId === id
     ).length;
 
   const image = isBackground(folder.background)
@@ -124,7 +123,9 @@ export function Folder({ onPlay }: FolderProps) {
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      dispatch(movePlaylist({ active: active.id as string, over: over.id as string }));
+      dispatch(
+        moveSoundboard({ active: active.id as string, over: over.id as string })
+      );
     }
     setDragId(null);
   }
@@ -136,15 +137,26 @@ export function Folder({ onPlay }: FolderProps) {
         if (files.length > 0 && directory.path !== "/") {
           const id = uuid();
           dispatch(
-            addPlaylist({
+            addSoundboard({
               id,
               background: getRandomBackground(),
               title: directory.name,
-              tracks: [],
+              sounds: [],
               folderId: folder.id,
             })
           );
-          dispatch(addTracks({ tracks: files, playlistId: id }));
+          dispatch(
+            addSounds({
+              sounds: files.map((file) => ({
+                ...file,
+                loop: false,
+                volume: 1,
+                fadeIn: 100,
+                fadeOut: 100,
+              })),
+              soundboardId: id,
+            })
+          );
         }
       }
     }
@@ -179,8 +191,7 @@ export function Folder({ onPlay }: FolderProps) {
         />
         <Box
           sx={{
-            backgroundImage:
-              "linear-gradient(0deg, #ffffff44 30%,  #00000088 100%)",
+            backgroundImage: "linear-gradient(0deg, #ffffff44 30%,  #00000088 100%)",
             position: "absolute",
             top: 0,
             left: 0,
@@ -208,7 +219,7 @@ export function Folder({ onPlay }: FolderProps) {
                   <CreateNewFolderRounded />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Add Playlist">
+            <Tooltip title="Add Soundboard">
               <IconButton onClick={() => setAddOpen(true)}>
                 <Add />
               </IconButton>
@@ -245,23 +256,23 @@ export function Folder({ onPlay }: FolderProps) {
                 {subfolders.map((sf) => (
                   <Grid item xs={2} sm={3} md={3} key={sf.id}>
                     <SortableItem id={sf.id}>
-                      <FolderItem
+                      <SoundboardFolderItem
                         folder={sf}
-                        playlistCount={getPlaylistCountInFolder(sf.id)}
-                        onSelect={(id) => navigate(`/folders/${id}`)}
+                        soundboardCount={getSoundboardCountInFolder(sf.id)}
+                        onSelect={(id) => navigate(`/soundboard-folders/${id}`)}
                       />
                     </SortableItem>
                   </Grid>
                 ))}
               </SortableContext>
             )}
-            <SortableContext items={folderPlaylists} strategy={rectSortingStrategy}>
-              {folderPlaylists.map((playlist) => (
-                <Grid item xs={2} sm={3} md={3} key={playlist.id}>
-                  <SortableItem id={playlist.id}>
-                    <PlaylistItem
-                      playlist={playlist}
-                      onSelect={(id) => navigate(`/playlists/${id}`)}
+            <SortableContext items={folderSoundboards} strategy={rectSortingStrategy}>
+              {folderSoundboards.map((sb) => (
+                <Grid item xs={2} sm={3} md={3} key={sb.id}>
+                  <SortableItem id={sb.id}>
+                    <SoundboardItem
+                      soundboard={sb}
+                      onSelect={(id) => navigate(`/soundboards/${id}`)}
                       onPlay={onPlay}
                     />
                   </SortableItem>
@@ -269,8 +280,8 @@ export function Folder({ onPlay }: FolderProps) {
               ))}
               <DragOverlay>
                 {dragId ? (
-                  <PlaylistItem
-                    playlist={playlists.playlists.byId[dragId]}
+                  <SoundboardItem
+                    soundboard={soundboards.soundboards.byId[dragId]}
                     onSelect={() => {}}
                     onPlay={() => {}}
                   />
@@ -285,12 +296,12 @@ export function Folder({ onPlay }: FolderProps) {
           {...overlayListeners}
         >
           <Typography sx={{ pointerEvents: "none" }}>
-            Drop the playlists here...
+            Drop the soundboards here...
           </Typography>
         </Backdrop>
       </Container>
       <Menu
-        id="folder-menu"
+        id="soundboard-folder-menu"
         anchorEl={anchorEl}
         open={menuOpen}
         onClose={handleMenuClose}
@@ -302,17 +313,17 @@ export function Folder({ onPlay }: FolderProps) {
         <MenuItem onClick={handleCopyID}>Copy ID</MenuItem>
         <MenuItem onClick={handleDelete}>Delete</MenuItem>
       </Menu>
-      <PlaylistAdd
+      <SoundboardAdd
         open={addOpen}
         onClose={() => setAddOpen(false)}
         folderId={folder.id}
       />
-      <FolderAdd
+      <SoundboardFolderAdd
         open={folderAddOpen}
         onClose={() => setFolderAddOpen(false)}
         parentId={folder.id}
       />
-      <FolderSettings
+      <SoundboardFolderSettings
         folder={folder}
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -320,4 +331,3 @@ export function Folder({ onPlay }: FolderProps) {
     </>
   );
 }
-
